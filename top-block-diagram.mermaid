@@ -1,0 +1,65 @@
+flowchart LR
+    classDef input fill:#d4f1f9,stroke:#333
+    classDef process fill:#e1d5e7,stroke:#333
+    classDef decimator fill:#d5e8d4,stroke:#333
+    classDef demod fill:#ffe6cc,stroke:#333
+    classDef output fill:#fff2cc,stroke:#333
+    classDef config fill:#f8cecc,stroke:#333
+
+    %% Inputs
+    ADC["AXI-Stream\nIQ Input"] -->|"I/Q 16-bit\n61.44 MHz"| RawExtract["Input Data\nExtraction"]
+    class ADC input
+
+    %% Configuration
+    Config["AXI-Lite\nConfiguration"] -.->|"Control\nRegisters"| Settings
+    class Config config
+    
+    subgraph Settings["Configuration Registers"]
+        SPS["samples_per_symbol\n(0x04) = 4"]
+        DOPE["doppler_shift\n(0x08)"]
+        DECI["decimation_enable\n(0x0C) = 1"]
+    end
+    class Settings config
+
+    %% Two-Stage Decimation
+    RawExtract -->|"Raw I/Q\n61.44 MHz"| Decimator
+    class RawExtract process
+    
+    subgraph Decimator["Two-Stage Decimator"]
+        direction TB
+        Stage1["Stage 1 FIR Filter\n33-tap Symmetric\n8× Decimation"] -->|"7.68 MHz"| Stage2["Stage 2 FIR Filter\n25-tap Symmetric\n71× Decimation"]
+    end
+    class Decimator decimator
+    class Stage1 decimator
+    class Stage2 decimator
+
+    %% Doppler Compensation
+    Decimator -->|"Decimated I/Q\n108.17 kHz"| Doppler["Doppler\nCompensation"]
+    DOPE -.->|"frequency"| Doppler
+    class Doppler process
+
+    %% MSK Demodulator
+    Doppler -->|"Corrected I/Q\n108.17 kHz"| MSKDemod
+    SPS -.->|"samples_per_symbol"| MSKDemod
+    
+    subgraph MSKDemod["MSK Demodulator"]
+        CostasLoops["Dual Costas Loops\n±π/8 Phase Increments"]
+    end
+    class MSKDemod demod
+    class CostasLoops demod
+
+    %% Bit to Byte Conversion
+    MSKDemod -->|"Demodulated\nBits"| BitToByte["Bit to Byte\nConversion"]
+    class BitToByte process
+
+    %% Clock Domain Crossing
+    BitToByte -->|"Byte Data"| CDC["Clock Domain\nCrossing"]
+    class CDC process
+
+    %% Output
+    CDC -->|"Demodulated\nBytes"| Output["AXI-Stream\nOutput"]
+    class Output output
+
+    %% Status
+    MSKDemod -->|"Lock Status"| StatusOut["Status\nOutput"]
+    class StatusOut output

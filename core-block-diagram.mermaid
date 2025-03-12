@@ -1,0 +1,93 @@
+flowchart TD
+    classDef input fill:#d4f1f9,stroke:#333
+    classDef oscillator fill:#d5e8d4,stroke:#333
+    classDef costas fill:#e1d5e7,stroke:#333
+    classDef decision fill:#ffe6cc,stroke:#333
+    classDef timing fill:#fff2cc,stroke:#333
+    classDef output fill:#f8cecc,stroke:#333
+
+    %% Inputs
+    IQ["I/Q Samples\n108.17 kHz"] --> SplitPaths
+    SPS["samples_per_symbol\n(4)"] -->|"configure"| TimingRecovery
+    class IQ input
+    class SPS input
+
+    %% Path splitting and NCO generation
+    SplitPaths["Split Data Paths"] --> Loop1 & Loop2
+    class SplitPaths input
+    
+    subgraph NCOs["Phase Accumulators"]
+        direction LR
+        NCO1["NCO 1\nfc + 1/(4T)"] 
+        NCO2["NCO 2\nfc - 1/(4T)"]
+    end
+    class NCOs oscillator
+    class NCO1 oscillator
+    class NCO2 oscillator
+
+    %% Calculation of phase increments
+    subgraph PhaseIncs["Phase Increments"]
+        PI["π constant\n(32768 in Q15)"] --> PhaseCalc
+        SPS --> PhaseCalc["Phase Increment\nCalculation"]
+        PhaseCalc -->|"phase_inc1 = π/8"| NCO1
+        PhaseCalc -->|"phase_inc2 = -π/8"| NCO2
+    end
+
+    %% Costas loops
+    subgraph Loop1["Costas Loop 1"]
+        direction TB
+        Mix1["Mixer"] --> Mult1["I×Q\nMultiplier"] --> Filt1["Loop\nFilter"] --> Freq1["Frequency\nControl"]
+        Freq1 --> NCO1
+    end
+    class Loop1 costas
+    class Mix1 costas
+    class Mult1 costas
+    class Filt1 costas
+    class Freq1 costas
+
+    subgraph Loop2["Costas Loop 2"]
+        direction TB
+        Mix2["Mixer"] --> Mult2["I×Q\nMultiplier"] --> Filt2["Loop\nFilter"] --> Freq2["Frequency\nControl"]
+        Freq2 --> NCO2
+    end
+    class Loop2 costas
+    class Mix2 costas
+    class Mult2 costas
+    class Filt2 costas
+    class Freq2 costas
+
+    %% Timing recovery
+    TimingRecovery["Symbol Timing\nRecovery"] --> SymbolClock
+    class TimingRecovery timing
+
+    %% Decision logic
+    SymbolClock["Symbol\nClock"] --> Correlator
+    class SymbolClock timing
+
+    subgraph Correlator["Massey Two-Symbol Correlator"]
+        Correlate1["Correlator\nFrequency 1"]
+        Correlate2["Correlator\nFrequency 2"]
+        Compare["Correlation\nComparison"]
+        Correlate1 & Correlate2 --> Compare
+    end
+    class Correlator decision
+    class Correlate1 decision
+    class Correlate2 decision
+    class Compare decision
+
+    %% Decision switching
+    Compare -->|"decision bit"| DecisionSwitch["Decision\nSwitch"]
+    DecisionSwitch -->|"enable"| Loop1
+    DecisionSwitch -->|"enable"| Loop2
+    DecisionSwitch --> BitOutput
+    class DecisionSwitch decision
+
+    %% Outputs
+    BitOutput["Bit Output\nand Valid"] --> OutputPorts["bit_out\nbit_valid"]
+    class BitOutput output
+    class OutputPorts output
+
+    %% Lock detection
+    DecisionSwitch -->|"transitions"| LockDetect["Lock\nDetection"] --> LockOut["lock_detect"]
+    class LockDetect output
+    class LockOut output
