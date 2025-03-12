@@ -1,0 +1,4 @@
+# Assign addresses
+assign_bd_address [get_bd_addr_segs {msk_demod_0/s_axi/reg0}]
+set_property offset 0x43C00000 [get_bd_addr_segs {sys_ps7/Data/SEG_msk_demod_0_reg0}]
+set_property range 4K [get_bd_addr_segs {sys_ps7/Data/SEG_msk_demod_0_reg0}]
