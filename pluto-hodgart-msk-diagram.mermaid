@@ -1,0 +1,85 @@
+graph TD
+    %% Main interfaces
+    input[AXI-Stream Input] --> iqproc[IQ Processor]
+    
+    %% System signals
+    sysclk[sys_clk] -.-> control
+    sysrst[sys_resetn] -.-> control
+    
+    %% Doppler compensation
+    iqproc --> dopcomp[Doppler Compensation]
+    dopcomp --> |i_compensated, q_compensated| demod
+    
+    %% Sine/Cosine tables
+    sintable[Sine Table] -.-> dopcomp
+    control[Control Logic] -.-> dopcomp
+    
+    %% Main Demodulator
+    demod[hodgart_msk_demodulator] --> bitproc[Bit Processing]
+    
+    %% Configuration
+    config[AXI-Lite Config] --> reg[Configuration Registers]
+    reg --> |samples_per_symbol| demod
+    reg --> |doppler_shift| dopcomp
+    
+    %% Bit processing
+    bitproc --> cdc[Clock Domain Crossing]
+    cdc --> bytebuff[Byte Buffer]
+    bytebuff --> output[AXI-Stream Output]
+    
+    %% Status signals
+    demod --> |lock_detect| status[Status Output]
+    
+    %% Subgraphs for logical grouping
+    subgraph "pluto_hodgart_msk_top"
+        iqproc
+        dopcomp
+        demod
+        bitproc
+        cdc
+        bytebuff
+        reg
+        control
+        sintable
+    end
+    
+    subgraph "Input Interface"
+        input
+        sysclk
+        sysrst
+    end
+    
+    subgraph "Configuration Interface"
+        config
+    end
+    
+    subgraph "Output Interface"
+        output
+        status
+    end
+    
+    %% Component details
+    subgraph "hodgart_msk_demodulator Details"
+        demod_clk[clk] --> demod_core[MSK Demodulation Core]
+        demod_reset[reset_n] --> demod_core
+        demod_i[i_in] --> demod_core
+        demod_q[q_in] --> demod_core
+        demod_valid[sample_valid] --> demod_core
+        demod_sps[samples_per_symbol] --> demod_core
+        demod_core --> demod_bit_out[bit_out]
+        demod_core --> demod_bit_valid[bit_valid]
+        demod_core --> demod_lock[lock_detect]
+    end
+    
+    style input fill:#d0e0ff,stroke:#333,stroke-width:2px
+    style iqproc fill:#ffe0d0,stroke:#333,stroke-width:2px
+    style dopcomp fill:#f0d0f0,stroke:#333,stroke-width:2px
+    style demod fill:#d0ffe0,stroke:#333,stroke-width:2px
+    style bitproc fill:#f0f0d0,stroke:#333,stroke-width:2px
+    style cdc fill:#d0f0f0,stroke:#333,stroke-width:2px
+    style bytebuff fill:#ffe0d0,stroke:#333,stroke-width:2px
+    style output fill:#d0e0ff,stroke:#333,stroke-width:2px
+    style status fill:#ffffd0,stroke:#333,stroke-width:2px
+    style config fill:#ffffd0,stroke:#333,stroke-width:2px
+    style reg fill:#d0f0ff,stroke:#333,stroke-width:2px
+    style sintable fill:#f0d0f0,stroke:#333,stroke-width:2px
