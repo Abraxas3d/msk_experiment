@@ -23,4 +23,12 @@ I focused on implementing the following functionality.
 - Two-Symbol Detection: Following Massey's theoretical foundation, the demodulator makes decisions based on correlation over two symbol intervals, which is described as "achieving optimal detection for MSK".
 - Doppler Compensation: Based on Sun's paper, this implementation includes Doppler shift compensation in the top-level module to handle the large frequency shifts encountered in LEO satellite communications and HEO satellite close approaches. 
 - Adaptive Loop Filtering: The PI controllers in the Costas loops use proportional and integral gains that can be adjusted based on signal conditions, enhancing tracking performance in noisy environments, or allowing a "big" loop for initial tracking and a "small" loop for maintaining tracking. 
-- Lock Detection: A lock detection mechanism is in here providing status information that can be used by higher-level systems. Lock detection is a function that pluto_msk has and is considered important. 
+- Lock Detection: A lock detection mechanism is in here providing status information that can be used by higher-level systems. Lock detection is a function that pluto_msk has and is considered important.
+
+## Clock Planner
+
+The plan:
+
+RF Front End → Anti-aliasing Filter → Decimation by 568 → Frequency Correction → Costas Loop → Symbol Timing Recovery → Decision Device
+
+
