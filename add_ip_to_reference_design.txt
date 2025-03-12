@@ -1,0 +1,13 @@
+# Add MSK demodulator IP to the block design
+set msk_demod [create_bd_cell -type ip -vlnv user.org:user:msk_demod:1.0 msk_demod_0]
+
+# Connect clocks and resets
+connect_bd_net [get_bd_pins axi_clk] [get_bd_pins msk_demod_0/axi_clk]
+connect_bd_net [get_bd_pins axi_resetn] [get_bd_pins msk_demod_0/axi_resetn]
+
+# Connect data paths
+connect_bd_intf_net [get_bd_intf_pins axi_adrv9009_rx_dma/m_axis] [get_bd_intf_pins msk_demod_0/s_axis]
+connect_bd_intf_net [get_bd_intf_pins msk_demod_0/m_axis] [get_bd_intf_pins custom_dma/s_axis]
+
+# Connect AXI-Lite for configuration
+connect_bd_intf_net [get_bd_intf_pins axi_interconnect/M05_AXI] [get_bd_intf_pins msk_demod_0/s_axi]
